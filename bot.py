@@ -48,7 +48,7 @@ class CustomGate(ccxt.gate):
     def fetch(self, url, method='GET', headers=None, body=None):
         if headers is None:
             headers = {}
-        headers['X-Gate-Channel-Id'] = 'laohuoji'
+        headers['X-Gate-Channel-Id'] = 'voger'
         headers['Accept'] = 'application/json'
         headers['Content-Type'] = 'application/json'
         return super().fetch(url, method, headers, body)
