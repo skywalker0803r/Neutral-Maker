@@ -44,10 +44,11 @@ logger = logging.getLogger()
 
 
 class CustomGate(ccxt.gate):
-    """自定義 Gate.io 交易所類"""
+    """自定義 Gate.io 交易所類，注入 Broker ID"""
     def fetch(self, url, method='GET', headers=None, body=None):
         if headers is None:
             headers = {}
+        # 這裡填入你的渠道碼 voger
         headers['X-Gate-Channel-Id'] = 'voger'
         headers['Accept'] = 'application/json'
         headers['Content-Type'] = 'application/json'
@@ -91,6 +92,24 @@ class GridTradingBot:
         self.lower_price_short = 0
         self.upper_price_short = 0
         self.last_strategy_run_time = 0.0
+    
+    async def _ws_send_with_broker(self, websocket, channel, event, payload_list):
+        """封裝 WebSocket 發送邏輯，加入 Broker req_header"""
+        current_time = int(time.time())
+        auth_msg = f"channel={channel}&event={event}&time={current_time}"
+        sign = self._generate_sign(auth_msg)
+        
+        payload = {
+            "time": current_time,
+            "channel": channel,
+            "event": event,
+            "payload": payload_list,
+            "auth": {"method": "api_key", "KEY": self.api_key, "SIGN": sign},
+            "req_header": {
+                "X-Gate-Channel-Id": "voger" # 渠道碼
+            }
+        }
+        await websocket.send(json.dumps(payload))
 
     def _initialize_exchange(self):
         """初始化交易所 API"""
@@ -169,11 +188,12 @@ class GridTradingBot:
     async def connect_websocket(self):
         """連接 WebSocket 並訂閱數據"""
         async with websockets.connect(WEBSOCKET_URL) as websocket:
-            await self.subscribe_ticker(websocket)
-            await self.subscribe_positions(websocket)
-            await self.subscribe_orders(websocket)
-            await self.subscribe_book_ticker(websocket)
-            await self.subscribe_balances(websocket)
+            # 呼叫封裝好的方法來訂閱，這會自動帶入 voger 渠道碼
+            await self._ws_send_with_broker(websocket, "futures.tickers", "subscribe", [self.ws_symbol])
+            await self._ws_send_with_broker(websocket, "futures.positions", "subscribe", [self.ws_symbol])
+            await self._ws_send_with_broker(websocket, "futures.orders", "subscribe", [self.ws_symbol])
+            await self._ws_send_with_broker(websocket, "futures.book_ticker", "subscribe", [self.ws_symbol])
+            await self._ws_send_with_broker(websocket, "futures.balances", "subscribe", ["USDT"])
 
             while True:
                 try:

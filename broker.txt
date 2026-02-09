@@ -1,0 +1,33 @@
+API Broker 上線流程
+一、測試階段
+場景：API Broker 想要從 Gate 用戶中獲得返傭
+
+經紀商註冊 gate.io 賬號（已有 gate.io 賬號，請略過）
+
+申請加入 Gate Broker Program
+
+在申請表中勾選 API Broker，聯繫客戶經理，提交 UID，由客戶經理評估返傭比例（新用戶現貨最高 50% & 合約最高 50%，老用戶現貨和合約最高 20%）
+
+客戶經理為經紀商申請渠道碼
+
+經紀商將渠道碼發送給交易用戶
+
+交易用戶生成 APIKey，使用通用 API 下單交易，並在請求頭 headers 中傳入渠道碼：
+
+代碼範例
+1. Rest 設置 channelID
+JSON
+headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'X-Gate-Channel-Id': '渠道碼'
+}
+2. Websocket 設置 channelID
+JSON
+"payload": {
+    "req_header": {
+        "X-Gate-Channel-Id": "渠道碼"
+    },
+    "req_id": "001",
+    "req_param": "api_order"
+}
