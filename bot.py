@@ -45,13 +45,24 @@ logger = logging.getLogger()
 
 class CustomGate(ccxt.gate):
     """自定義 Gate.io 交易所類，注入 Broker ID"""
+    def __init__(self, config={}):
+        # 1. 確保 options 中有 brokerId
+        if 'options' not in config:
+            config['options'] = {}
+        config['options']['brokerId'] = 'voger'
+        
+        super().__init__(config)
+        
+        # 2. 強制設定全域 Headers
+        if not self.headers:
+            self.headers = {}
+        self.headers['X-Gate-Channel-Id'] = 'voger'
+
     def fetch(self, url, method='GET', headers=None, body=None):
         if headers is None:
             headers = {}
-        # 這裡填入你的渠道碼 voger
+        # 3. 雙重保險：在每次請求時再次檢查並注入
         headers['X-Gate-Channel-Id'] = 'voger'
-        headers['Accept'] = 'application/json'
-        headers['Content-Type'] = 'application/json'
         return super().fetch(url, method, headers, body)
 
 
@@ -116,8 +127,15 @@ class GridTradingBot:
         exchange = CustomGate({
             "apiKey": self.api_key,
             "secret": self.api_secret,
-            "options": {"defaultType": "future"},
+            "options": {
+                "defaultType": "future",
+                "brokerId": "voger"  # [修正點] 明確加入 brokerId
+            },
         })
+        # [修正點] 再次確保 header 存在 (雖 CustomGate 已做，但這裡加更保險)
+        exchange.headers = {
+            'X-Gate-Channel-Id': 'voger'
+        }
         return exchange
 
     def _get_price_precision(self):
